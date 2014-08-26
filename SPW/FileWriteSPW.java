@@ -82,12 +82,15 @@ public class FileWriteSPW {
     this.outputFile = outputFile;       
   }
   
-  public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet)  {
+  public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays )  {
     this.rows = nFov.length;
     this.cols = nFov[0].length;
     width = sizeX;
     this.height = sizeY;
     this.sizet = sizet;
+    
+    setupModulo(delays);
+    
     IMetadata omexml = initializeMetadata(nFov);
      
     Path path = FileSystems.getDefault().getPath(outputFile);
@@ -141,10 +144,7 @@ public class FileWriteSPW {
     try {
       writer.setId(outputFile);
     }
-    catch (FormatException e) {
-      exception = e;
-    }
-    catch (IOException e) {
+    catch (FormatException | IOException e) {
       exception = e;
     }
     if (exception != null) {
@@ -167,95 +167,86 @@ public class FileWriteSPW {
       //IMetadata meta = service.createOMEXMLMetadata();
       meta.createRoot();
       
-      String suffixStr;
       int plateIndex = 0;
-      int series = 0;
+      int series = 0;     // count of images
       int well = 0;
-      int nFov;
-      String wellSampleID;
       
       // Create Minimal 2x2 Plate 
       meta.setPlateID(MetadataTools.createLSID("Plate", 0), 0);
-   
+      
       meta.setPlateRowNamingConvention(NamingConvention.LETTER, 0);
       meta.setPlateColumnNamingConvention(NamingConvention.NUMBER, 0);
-
       meta.setPlateRows(new PositiveInteger(rows), 0);
       meta.setPlateColumns(new PositiveInteger(cols), 0);
       meta.setPlateName("First test Plate", 0);
+      
       PositiveInteger pwidth = new PositiveInteger(width);
       PositiveInteger pheight = new PositiveInteger(height);
       
+      char rowChar = 'A';
       for (int row = 0; row  < rows; row++) {
         for (int column = 0; column < cols; column++) {
           
-          suffixStr =  String.valueOf((char)(row + 65)) + ":" + Integer.toString(column + 1);
-          
           // set up well
-          String wellID = MetadataTools.createLSID("Well:" + suffixStr, 0, well);
+          String wellID = MetadataTools.createLSID("Well:", well);
           meta.setWellID(wellID, plateIndex, well);
           meta.setWellRow(new NonNegativeInteger(row), plateIndex, well);
-          meta.setWellColumn(new NonNegativeInteger(column), plateIndex, well);
+          meta.setWellColumn(new NonNegativeInteger(column), plateIndex, well); 
           
-          nFov = nFovs[row][column];
+          int nFOV= nFovs[row][column];
           
-          if (nFov > 0)  {
+          for(int fov = 0; fov < nFOV ; fov++)  {
+         
+            // Create Image
+            String imageName = rowChar + ":" + Integer.toString(column) + ":FOV:" + Integer.toString(fov);
+            String imageID = MetadataTools.createLSID("Image", well, fov);
+            meta.setImageID(imageID, series);
+            meta.setImageName(imageName, series);
             
-            for (int sampleIndex = 0; sampleIndex < nFov; sampleIndex++) {
-          
-              // Create Image
-              String sampleStr = Integer.toString(sampleIndex);
-              String imageID = MetadataTools.createLSID("Image:" + suffixStr + ":FOV:" + sampleStr, series);
-              meta.setImageID(imageID, series);
-              meta.setImageName("Image: " + suffixStr, series);
-              meta.setPixelsID("Pixels:0:" + suffixStr, series);
-
-              // specify that the pixel data is stored in big-endian format
-              // change 'TRUE' to 'FALSE' to specify little-endian format
-              meta.setPixelsBinDataBigEndian(Boolean.TRUE,  series, 0);
-
-              // specify that the images are stored in ZCT order
-              meta.setPixelsDimensionOrder(DimensionOrder.XYZCT, series);
-
-              // specify that the pixel type of the image
-              meta.setPixelsType(PixelType.fromString(FormatTools.getPixelTypeString(pixelType)), series);
-
-              // specify the dimensions of the images
-              meta.setPixelsSizeX(pwidth, series);
-              meta.setPixelsSizeY(pheight, series);
-              meta.setPixelsSizeZ(new PositiveInteger(1), series);
-              meta.setPixelsSizeC(new PositiveInteger(1), series);
-              meta.setPixelsSizeT(new PositiveInteger(sizet), series);
-
-              // define each channel and specify the number of samples in the channel
-              // the number of samples is 3 for RGB images and 1 otherwise
-              meta.setChannelID("Channel:0:" + suffixStr, series, 0);
-              meta.setChannelSamplesPerPixel(new PositiveInteger(1), series, 0);
-          
-              wellSampleID = MetadataTools.createLSID("WellSample:" + sampleStr, 0, series, sampleIndex);
-              System.out.println(suffixStr);
-              System.out.println(series);
-              System.out.println(sampleIndex);
-              
-              
-              meta.setWellSampleID(wellSampleID, 0, well, sampleIndex);
-              meta.setWellSampleIndex(new NonNegativeInteger(series), 0, series, sampleIndex);
-              meta.setWellSampleImageRef(imageID, 0, series, sampleIndex);
-
-              // add FLIM ModuloAlongT annotation if required 
-              if (delays != null) {
-                CoreMetadata modlo = createModuloAnn(meta);
-                service.addModuloAlong(meta, modlo, series);
-              }
+            String pixelsID = MetadataTools.createLSID("Pixels",row, well, fov);
+            meta.setPixelsID(pixelsID, series);
             
-              series++;
+            // specify that the pixel data is stored in big-endian format
+            // change 'TRUE' to 'FALSE' to specify little-endian format
+            meta.setPixelsBinDataBigEndian(Boolean.TRUE,  series, 0);
+
+            // specify that the image is stored in ZCT order
+            meta.setPixelsDimensionOrder(DimensionOrder.XYZCT, series);
+
+            // specify the pixel type of the image
+            meta.setPixelsType(PixelType.fromString(FormatTools.getPixelTypeString(pixelType)), series);
+
+            // specify the dimensions of the image
+            meta.setPixelsSizeX(pwidth, series);
+            meta.setPixelsSizeY(pheight, series);
+            meta.setPixelsSizeZ(new PositiveInteger(1), series);
+            meta.setPixelsSizeC(new PositiveInteger(1), series);
+            meta.setPixelsSizeT(new PositiveInteger(sizet), series);
+
+            // define each channel and specify the number of samples in the channel
+            // the number of samples is 3 for RGB images and 1 otherwise
+            String channelID = MetadataTools.createLSID("Channel",well, fov);
+            meta.setChannelID(channelID, series,0 );
+            meta.setChannelSamplesPerPixel(new PositiveInteger(1), series, 0);
+           
+            // set sample
+            String wellSampleID = MetadataTools.createLSID("WellSample",well, fov);
+            meta.setWellSampleID(wellSampleID,0,well,fov);
+            // NB sampleIndex here == series ie the image No
+            meta.setWellSampleIndex(new NonNegativeInteger(series), 0, well, fov);
+            meta.setWellSampleImageRef(imageID, 0, well, fov);
             
+            // add FLIM ModuloAlongT annotation if required 
+            if (delays != null)  {
+              CoreMetadata modlo = createModuloAnn(meta);
+              service.addModuloAlong(meta, modlo, series);
             }
-          }
-
+            
+            series++;
+          }  //end of samples  
           well++;
-      
         }
+        rowChar++;
       }
       
       //String dump = meta.dumpXML();
@@ -277,7 +268,7 @@ public class FileWriteSPW {
   /**
    * Setup delays.
    */
-  public boolean setupModulo(ArrayList<String> delays) {
+  private boolean setupModulo(ArrayList<String> delays) {
     
     boolean success = false;
     if (delays.size() == sizet)  {
@@ -303,7 +294,9 @@ public class FileWriteSPW {
     modlo.moduloT.labels = new String[sizet];
 
     for (int i = 0; i < sizet; i++) {
+      System.out.println(delays.get(i));
       modlo.moduloT.labels[i] = delays.get(i);
+      
     }
 
     return modlo;
