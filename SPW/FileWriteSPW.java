@@ -88,6 +88,7 @@ public class FileWriteSPW {
     width = sizeX;
     this.height = sizeY;
     this.sizet = sizet;
+    Exception exception = null;
     
     setupModulo(delays);
     
@@ -99,8 +100,16 @@ public class FileWriteSPW {
     try {
       boolean success = Files.deleteIfExists(path);
       System.out.println("Delete status: " + success);
-    } catch (IOException | SecurityException e) {
-      System.err.println(e);
+    } 
+    catch (IOException e) {
+      exception = e;
+    }
+    catch (SecurityException e) {
+      exception = e;
+    }
+    if (exception != null) {
+      System.err.println("Failed to save plane.");
+      exception.printStackTrace();
     }
     
     initializationSuccess = initializeWriter(omexml);
@@ -144,11 +153,15 @@ public class FileWriteSPW {
     try {
       writer.setId(outputFile);
     }
-    catch (FormatException | IOException e) {
+    catch (FormatException e) {
+      exception = e;
+    }
+    catch (IOException e) {
       exception = e;
     }
     if (exception != null) {
       System.err.println("Failed to initialize file writer.");
+      exception.printStackTrace();
     }
     return exception == null;
   }
@@ -253,14 +266,21 @@ public class FileWriteSPW {
       //System.out.println("dump = ");
       //System.out.println(dump);
       return meta;
-      }
-    
-    catch (ServiceException | EnumerationException | DependencyException e) {
-      exception = e;
     }
     
+    catch (DependencyException e) {
+      exception = e;
+    }
+    catch (ServiceException e) {
+      exception = e;
+    }
+    catch (EnumerationException e) {
+      exception = e;
+    }
+
     System.err.println("Failed to populate OME-XML metadata object.");
-    return null;
+    exception.printStackTrace();
+    return null;    
       
   }
   
@@ -315,16 +335,19 @@ public class FileWriteSPW {
     try {
       writer.saveBytes(index, plane);
     }
-    catch (FormatException | IOException e) {
+    catch (FormatException e) {
+      exception = e;
+    }
+    catch (IOException e) {
       exception = e;
     }
     if (exception != null) {
       System.err.println("Failed to save plane.");
+      exception.printStackTrace();
     }
   }
 
   
-
   /** Close the file writer. */
   public void cleanup() {
     try {
