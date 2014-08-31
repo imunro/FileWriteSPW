@@ -25,10 +25,8 @@ package SPW;
  * #L%
  */
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 
 import loci.common.services.DependencyException;
@@ -52,7 +50,7 @@ import ome.xml.model.enums.NamingConvention;
 
 /**
  * Example class that shows how to export raw pixel data to OME-TIFF as a Plate using
- * Bio-Formats version 4.2 or later.
+ * Bio-Formats version 5.0.3 or later.
  */
 public class FileWriteSPW {
   
@@ -65,6 +63,8 @@ public class FileWriteSPW {
   boolean initializationSuccess = false;
   
   private ArrayList<String> delays = null;
+  
+  private Double[] exposureTimes;
   
   /** The file writer. */
   private ImageWriter writer;
@@ -82,34 +82,26 @@ public class FileWriteSPW {
     this.outputFile = outputFile;       
   }
   
-  public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays )  {
+  public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays, Double[] exposureTimes )  {
     this.rows = nFov.length;
     this.cols = nFov[0].length;
     width = sizeX;
     this.height = sizeY;
     this.sizet = sizet;
+    this.exposureTimes = exposureTimes;
     Exception exception = null;
     
     setupModulo(delays);
     
     IMetadata omexml = initializeMetadata(nFov);
-     
-    Path path = FileSystems.getDefault().getPath(outputFile);
-      //delete if exists 
-    //NB deleting old files seems to be critical when changing size
-    try {
-      boolean success = Files.deleteIfExists(path);
-      System.out.println("Delete status: " + success);
-    } 
-    catch (IOException e) {
-      exception = e;
-    }
-    catch (SecurityException e) {
-      exception = e;
-    }
-    if (exception != null) {
-      System.err.println("Failed to save plane.");
-      exception.printStackTrace();
+    
+    
+    File file = new File(outputFile);
+ 
+    // delete file if it exists
+    // NB deleting old files seems to be critical 
+    if (file.exists())  {
+      file.delete();
     }
     
     initializationSuccess = initializeWriter(omexml);
@@ -210,8 +202,8 @@ public class FileWriteSPW {
           
           for(int fov = 0; fov < nFOV ; fov++)  {
          
-            // Create Image
-            String imageName = rowChar + ":" + Integer.toString(column) + ":FOV:" + Integer.toString(fov);
+            // Create Image NB numberng in the Name goes from 1->n not 0-> n-1
+            String imageName = rowChar + ":" + Integer.toString(column + 1) + ":FOV:" + Integer.toString(fov + 1);
             String imageID = MetadataTools.createLSID("Image", well, fov);
             meta.setImageID(imageID, series);
             meta.setImageName(imageName, series);
@@ -248,6 +240,13 @@ public class FileWriteSPW {
             // NB sampleIndex here == series ie the image No
             meta.setWellSampleIndex(new NonNegativeInteger(series), 0, well, fov);
             meta.setWellSampleImageRef(imageID, 0, well, fov);
+            
+            for (int t = 0; t < sizet; t++)  {
+              meta.setPlaneTheT(new NonNegativeInteger(t), series, t);
+              meta.setPlaneTheC(new NonNegativeInteger(0), series, t);
+              meta.setPlaneTheZ(new NonNegativeInteger(0), series, t);
+              meta.setPlaneExposureTime(exposureTimes[t], series, t);
+            } 
             
             // add FLIM ModuloAlongT annotation if required 
             if (delays != null)  {
