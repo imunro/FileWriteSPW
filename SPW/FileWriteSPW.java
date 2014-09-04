@@ -64,7 +64,7 @@ public class FileWriteSPW {
   
   private ArrayList<String> delays = null;
   
-  private Double[] exposureTimes;
+  private Double[] exposureTimes = null;
   
   /** The file writer. */
   private ImageWriter writer;
@@ -83,12 +83,21 @@ public class FileWriteSPW {
   }
   
   public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays, Double[] exposureTimes )  {
+    
+    this.exposureTimes = exposureTimes;
+    
+    initializationSuccess = init(nFov, sizeX, sizeY, sizet, delays);
+    
+    return initializationSuccess;
+  }
+  
+  public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays )  {
     this.rows = nFov.length;
     this.cols = nFov[0].length;
     width = sizeX;
     this.height = sizeY;
     this.sizet = sizet;
-    this.exposureTimes = exposureTimes;
+    
     Exception exception = null;
     
     setupModulo(delays);
@@ -107,6 +116,7 @@ public class FileWriteSPW {
     initializationSuccess = initializeWriter(omexml);
     
     return initializationSuccess;
+    
   }
 
   /** Save a single  uint16 plane of data.
@@ -241,12 +251,14 @@ public class FileWriteSPW {
             meta.setWellSampleIndex(new NonNegativeInteger(series), 0, well, fov);
             meta.setWellSampleImageRef(imageID, 0, well, fov);
             
-            for (int t = 0; t < sizet; t++)  {
-              meta.setPlaneTheT(new NonNegativeInteger(t), series, t);
-              meta.setPlaneTheC(new NonNegativeInteger(0), series, t);
-              meta.setPlaneTheZ(new NonNegativeInteger(0), series, t);
-              meta.setPlaneExposureTime(exposureTimes[t], series, t);
-            } 
+            if (exposureTimes != null & exposureTimes.length == sizet)  {
+              for (int t = 0; t < sizet; t++)  {
+                meta.setPlaneTheT(new NonNegativeInteger(t), series, t);
+                meta.setPlaneTheC(new NonNegativeInteger(0), series, t);
+                meta.setPlaneTheZ(new NonNegativeInteger(0), series, t);
+                meta.setPlaneExposureTime(exposureTimes[t], series, t);
+              } 
+            }
             
             // add FLIM ModuloAlongT annotation if required 
             if (delays != null)  {
@@ -313,7 +325,7 @@ public class FileWriteSPW {
     modlo.moduloT.labels = new String[sizet];
 
     for (int i = 0; i < sizet; i++) {
-      System.out.println(delays.get(i));
+      //System.out.println(delays.get(i));
       modlo.moduloT.labels[i] = delays.get(i);
       
     }
