@@ -40,6 +40,7 @@ import loci.formats.meta.IMetadata;
 import loci.formats.ome.OMEXMLMetadata;
 import loci.formats.services.OMEXMLService;
 import loci.formats.MetadataTools;
+import loci.common.DataTools;
 
 import ome.xml.model.enums.DimensionOrder;
 import ome.xml.model.enums.EnumerationException;
@@ -119,7 +120,7 @@ public class FileWriteSPW {
     
   }
 
-  /** Save a single  uint16 plane of data.
+  /** Save a single byte plane of data.
    * @param plane  data
    * @param series  image no in plate
    * @param index t plane within image*/
@@ -139,6 +140,17 @@ public class FileWriteSPW {
     }   //endif 
   }
 
+  /** Save a single Short plane of data.
+   * @param plane  data
+   * @param series  image no in plate
+   * @param index t plane within image*/
+  public void export(short[] plane, int series, int index) {
+    
+    byte[] planeb = DataTools.shortsToBytes(plane, false);
+    export(planeb, series, index);
+           
+  }
+  
   /**
    * Set up the file writer.
    *
