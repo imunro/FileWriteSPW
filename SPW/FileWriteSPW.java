@@ -65,10 +65,10 @@ public class FileWriteSPW {
   
   private ArrayList<String> delays = null;
   
-  private Double[] exposureTimes = null;
+  private double[] exposureTimes = null;
   
   /** The file writer. */
-  private ImageWriter writer;
+  private ImageWriter writer = null;
 
   /** The name of the current output file. */
   private final String outputFile;
@@ -80,10 +80,17 @@ public class FileWriteSPW {
    * @param outputFile the file to which we will export
    */
   public FileWriteSPW(String outputFile) {
-    this.outputFile = outputFile;       
+    this.outputFile = outputFile;    
+    File file = new File(outputFile);
+ 
+    // delete file if it exists
+    // NB deleting old files seems to be critical 
+    if (file.exists())  {
+      file.delete();
+    }
   }
   
-  public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays, Double[] exposureTimes )  {
+  public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays, double[] exposureTimes )  {
     
     this.exposureTimes = exposureTimes;
     
@@ -104,15 +111,6 @@ public class FileWriteSPW {
     setupModulo(delays);
     
     IMetadata omexml = initializeMetadata(nFov);
-    
-    
-    File file = new File(outputFile);
- 
-    // delete file if it exists
-    // NB deleting old files seems to be critical 
-    if (file.exists())  {
-      file.delete();
-    }
     
     initializationSuccess = initializeWriter(omexml);
     
@@ -263,7 +261,7 @@ public class FileWriteSPW {
             meta.setWellSampleIndex(new NonNegativeInteger(series), 0, well, fov);
             meta.setWellSampleImageRef(imageID, 0, well, fov);
             
-            if (exposureTimes != null & exposureTimes.length == sizet)  {
+            if (exposureTimes != null && exposureTimes.length == sizet)  {
               for (int t = 0; t < sizet; t++)  {
                 meta.setPlaneTheT(new NonNegativeInteger(t), series, t);
                 meta.setPlaneTheC(new NonNegativeInteger(0), series, t);
@@ -373,11 +371,13 @@ public class FileWriteSPW {
   
   /** Close the file writer. */
   public void cleanup() {
-    try {
-      writer.close();
-    }
-    catch (IOException e) {
-      System.err.println("Failed to close file writer.");
+    if (writer != null)  {
+      try {
+        writer.close();
+      }
+      catch (IOException e) {
+        System.err.println("Failed to close file writer.");
+      }
     }
   }
   
