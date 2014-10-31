@@ -117,6 +117,23 @@ public class FileWriteSPW {
     return initializationSuccess;
     
   }
+  
+  public boolean init( int[][] nFov, int sizeX, int  sizeY )  {
+    this.rows = nFov.length;
+    this.cols = nFov[0].length;
+    width = sizeX;
+    this.height = sizeY;
+    this.sizet = 1;
+    
+    Exception exception = null;
+    
+    IMetadata omexml = initializeMetadata(nFov);
+    
+    initializationSuccess = initializeWriter(omexml);
+    
+    return initializationSuccess;
+    
+  }
 
   /** Save a single byte plane of data.
    * @param plane  data
