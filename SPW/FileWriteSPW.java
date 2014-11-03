@@ -73,14 +73,19 @@ public class FileWriteSPW {
   /** The name of the current output file. */
   private final String outputFile;
   
+   /** Description of the plate. */
+  private final String plateDescription;
+  
+ 
 
   /**
    * Construct a new FileWriteSPW that will save to the specified file.
    *
    * @param outputFile the file to which we will export
    */
-  public FileWriteSPW(String outputFile) {
+  public FileWriteSPW(String outputFile, String plateDescription) {
     this.outputFile = outputFile;    
+    this.plateDescription = plateDescription;
     File file = new File(outputFile);
  
     // delete file if it exists
@@ -212,7 +217,10 @@ public class FileWriteSPW {
       int plateIndex = 0;
       int series = 0;     // count of images
       int well = 0;
-      
+  
+      meta.setPlateDescription(plateDescription,0); 
+   
+     
       // Create Minimal 2x2 Plate 
       meta.setPlateID(MetadataTools.createLSID("Plate", 0), 0);
       
