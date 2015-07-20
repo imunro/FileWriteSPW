@@ -1,4 +1,4 @@
 FileWriteSPW
 ============
 
-Java rtnns for writing FLIM  SPW ome-tiffs.
+Java rtns for writing FLIM  SPW ome-tiffs.
