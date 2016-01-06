@@ -28,6 +28,8 @@ package SPW;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import loci.common.services.DependencyException;
 import loci.common.services.ServiceException;
@@ -82,6 +84,7 @@ public class FileWriteSPW {
    * Construct a new FileWriteSPW that will save to the specified file.
    *
    * @param outputFile the file to which we will export
+   * @param plateDescription
    */
   public FileWriteSPW(String outputFile, String plateDescription) {
     this.outputFile = outputFile;    
@@ -145,19 +148,23 @@ public class FileWriteSPW {
    * @param series  image no in plate
    * @param index t plane within image*/
   public void export(byte[] plane, int series, int index) {
-    
+
     Exception exception = null;
-    
+
     if (initializationSuccess) {
-      if (series != writer.getSeries())  {
+      if (series != writer.getSeries()) {
         try {
           writer.setSeries(series);
         } catch (FormatException e) {
           exception = e;
         }
       }
-      savePlane( plane, index);
-    }   //endif 
+      try {
+        writer.saveBytes(index, plane);
+      } catch (FormatException | IOException ex) {
+        Logger.getLogger(FileWriteSPW.class.getName()).log(Level.SEVERE, null, ex);
+      }
+    }
   }
 
   /** Save a single Short plane of data.
@@ -314,18 +321,11 @@ public class FileWriteSPW {
       return meta;
     }
     
-    catch (DependencyException e) {
-      exception = e;
-    }
-    catch (ServiceException e) {
-      exception = e;
-    }
-    catch (EnumerationException e) {
+    catch (DependencyException | ServiceException | EnumerationException e) {
       exception = e;
     }
 
     System.err.println("Failed to populate OME-XML metadata object.");
-    exception.printStackTrace();
     return null;    
       
   }
@@ -368,31 +368,7 @@ public class FileWriteSPW {
     return modlo;
   }
 
-  /**
-   * Save a plane of pixel data to the output file.
-   *
-   * @param width the width of the image in pixels
-   * @param height the height of the image in pixels
-   * @param pixelType the pixel type of the image; @see loci.formats.FormatTools
-   */
-  private void savePlane(byte[] plane, int index) {
-    
-    Exception exception = null;
-    try {
-      writer.saveBytes(index, plane);
-    }
-    catch (FormatException e) {
-      exception = e;
-    }
-    catch (IOException e) {
-      exception = e;
-    }
-    if (exception != null) {
-      System.err.println("Failed to save plane.");
-      exception.printStackTrace();
-    }
-  }
-
+  
   
   /** Close the file writer. */
   public void cleanup() {
