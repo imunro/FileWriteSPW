@@ -28,8 +28,6 @@ package SPW;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import loci.common.services.DependencyException;
 import loci.common.services.ServiceException;
@@ -161,9 +159,12 @@ public class FileWriteSPW {
       }
       try {
         writer.saveBytes(index, plane);
-      } catch (FormatException | IOException ex) {
-        Logger.getLogger(FileWriteSPW.class.getName()).log(Level.SEVERE, null, ex);
+      } catch (FormatException  | IOException e) {
+        exception = e;
       }
+    }
+    if (exception != null) {
+      System.err.println("Failed to write data!");
     }
   }
 
@@ -194,10 +195,7 @@ public class FileWriteSPW {
     try {
       writer.setId(outputFile);
     }
-    catch (FormatException e) {
-      exception = e;
-    }
-    catch (IOException e) {
+    catch (FormatException | IOException e) {
       exception = e;
     }
     if (exception != null) {
