@@ -48,6 +48,7 @@ import ome.xml.model.enums.PixelType;
 import ome.xml.model.primitives.PositiveInteger;
 import ome.xml.model.primitives.NonNegativeInteger;
 import ome.xml.model.enums.NamingConvention;
+import ome.units.quantity.Time;
 
 /**
  * Example class that shows how to export raw pixel data to OME-TIFF as a Plate using
@@ -296,7 +297,7 @@ public class FileWriteSPW {
                 meta.setPlaneTheT(new NonNegativeInteger(t), series, t);
                 meta.setPlaneTheC(new NonNegativeInteger(0), series, t);
                 meta.setPlaneTheZ(new NonNegativeInteger(0), series, t);
-                meta.setPlaneExposureTime(exposureTimes[t], series, t);
+                meta.setPlaneExposureTime(new Time(exposureTimes[t],ome.units.UNITS.S), series, t);
               } 
             }
             

@@ -41,6 +41,7 @@ import loci.formats.ome.OMEXMLMetadata;
 import loci.formats.services.OMEXMLService;
 import loci.formats.MetadataTools;
 import loci.common.DataTools;
+import ome.units.quantity.Time;
 
 import ome.xml.model.enums.DimensionOrder;
 import ome.xml.model.enums.EnumerationException;
@@ -261,7 +262,7 @@ public class FileWrite {
           meta.setPlaneTheT(new NonNegativeInteger(t), series, t);
           meta.setPlaneTheC(new NonNegativeInteger(0), series, t);
           meta.setPlaneTheZ(new NonNegativeInteger(0), series, t);
-          meta.setPlaneExposureTime(exposureTimes[t], series, t);
+          meta.setPlaneExposureTime(new Time(exposureTimes[t],ome.units.UNITS.S), series, t);
         }
       }
 
