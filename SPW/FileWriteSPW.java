@@ -49,6 +49,14 @@ import ome.xml.model.primitives.PositiveInteger;
 import ome.xml.model.primitives.NonNegativeInteger;
 import ome.xml.model.enums.NamingConvention;
 import ome.units.quantity.Time;
+import ome.xml.meta.OMEXMLMetadataRoot;
+import ome.xml.model.Annotation;
+import ome.xml.model.Image;
+import ome.xml.model.Plate;
+import ome.xml.model.StructuredAnnotations;
+import ome.xml.model.Well;
+import ome.xml.model.WellSample;
+import ome.xml.model.XMLAnnotation;
 
 /**
  * Example class that shows how to export raw pixel data to OME-TIFF as a Plate using
@@ -76,6 +84,15 @@ public class FileWriteSPW {
   
    /** Description of the plate. */
   private final String plateDescription;
+  
+  /** OME metadata **/
+  private IMetadata omexml = null;
+  
+  /** OMEXML service **/
+  private OMEXMLService service = null;
+  
+  /** expected Images array. No of planes that have been written to each Image **/
+  private int[] expectedImages;
   
  
 
@@ -117,7 +134,7 @@ public class FileWriteSPW {
     
     setupModulo(delays);
     
-    IMetadata omexml = initializeMetadata(nFov);
+    omexml = initializeMetadata(nFov);
     
     initializationSuccess = initializeWriter(omexml);
     
@@ -134,7 +151,7 @@ public class FileWriteSPW {
     
     Exception exception = null;
     
-    IMetadata omexml = initializeMetadata(nFov);
+    omexml = initializeMetadata(nFov);
     
     initializationSuccess = initializeWriter(omexml);
     
@@ -160,6 +177,7 @@ public class FileWriteSPW {
       }
       try {
         writer.saveBytes(index, plane);
+        expectedImages[series]++;
       } catch (FormatException  | IOException e) {
         exception = e;
       }
@@ -201,7 +219,6 @@ public class FileWriteSPW {
     }
     if (exception != null) {
       System.err.println("Failed to initialize file writer.");
-      exception.printStackTrace();
     }
     return exception == null;
   }
@@ -215,11 +232,11 @@ public class FileWriteSPW {
     try {
       // create the OME-XML metadata storage object
       ServiceFactory factory = new ServiceFactory();
-      OMEXMLService service = factory.getInstance(OMEXMLService.class);
+      service = factory.getInstance(OMEXMLService.class);
       OMEXMLMetadata meta = service.createOMEXMLMetadata();
       //IMetadata meta = service.createOMEXMLMetadata();
       meta.createRoot();
-      
+    
       int plateIndex = 0;
       int series = 0;     // count of images
       int well = 0;
@@ -238,7 +255,7 @@ public class FileWriteSPW {
       
       PositiveInteger pwidth = new PositiveInteger(width);
       PositiveInteger pheight = new PositiveInteger(height);
-      
+        
       char rowChar = 'A';
       for (int row = 0; row  < rows; row++) {
         for (int column = 0; column < cols; column++) {
@@ -252,7 +269,7 @@ public class FileWriteSPW {
           int nFOV= nFovs[row][column];
           
           for(int fov = 0; fov < nFOV ; fov++)  {
-         
+            
             // Create Image NB numberng in the Name goes from 1->n not 0-> n-1
             String imageName = rowChar + ":" + Integer.toString(column + 1) + ":FOV:" + Integer.toString(fov + 1);
             String imageID = MetadataTools.createLSID("Image", well, fov);
@@ -291,7 +308,7 @@ public class FileWriteSPW {
             // NB sampleIndex here == series ie the image No
             meta.setWellSampleIndex(new NonNegativeInteger(series), 0, well, fov);
             meta.setWellSampleImageRef(imageID, 0, well, fov);
-            
+             
             if (exposureTimes != null && exposureTimes.length == sizet)  {
               for (int t = 0; t < sizet; t++)  {
                 meta.setPlaneTheT(new NonNegativeInteger(t), series, t);
@@ -313,6 +330,8 @@ public class FileWriteSPW {
         }
         rowChar++;
       }
+      
+      expectedImages = new int[series];
       
       //String dump = meta.dumpXML();
       //System.out.println("dump = ");
@@ -371,6 +390,48 @@ public class FileWriteSPW {
   
   /** Close the file writer. */
   public void cleanup() {
+    
+    int validPlanes = 1;  // No of planes expected for each image = 1 if not FLIM
+    if (delays != null)  {
+      validPlanes = sizet; 
+    }
+    
+    OMEXMLMetadataRoot root = (OMEXMLMetadataRoot) omexml.getRoot();
+    
+     Plate plate = root.getPlate(0);
+     StructuredAnnotations anns = root.getStructuredAnnotations();
+     
+     ArrayList<WellSample> invalidWellSamples = new ArrayList<>();
+     ArrayList<Image> invalidImages = new ArrayList<>();
+    
+    // Check that all expected Images have received the correct no of timepoints.
+    // if not record those images as being invalid
+    for(int i = 0; i < expectedImages.length; i++)  {
+      if (expectedImages[i] < validPlanes)  {
+        Image im = root.getImage(i);
+        invalidImages.add(im);
+        String ID = im.getID();
+        
+        // remove modulo Annotation if FLIM
+        if (delays != null)  {
+          XMLAnnotation ann = (XMLAnnotation) im.getLinkedAnnotation(0);
+          anns.removeXMLAnnotation(ann);
+        }
+      }      
+    }
+    
+  
+    // Now remove all limked wllSnmples and then invalid images 
+    for(int i = 0; i < invalidImages.size(); i++)  {
+      Image im = invalidImages.get(i);
+      WellSample wellSample = im.getLinkedWellSample(0);
+      Well well = wellSample.getWell();
+      well.removeWellSample(wellSample);
+      root.removeImage(im);
+    }
+    
+    
+
     if (writer != null)  {
       try {
         writer.close();
