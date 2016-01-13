@@ -401,7 +401,6 @@ public class FileWriteSPW {
      Plate plate = root.getPlate(0);
      StructuredAnnotations anns = root.getStructuredAnnotations();
      
-     ArrayList<WellSample> invalidWellSamples = new ArrayList<>();
      ArrayList<Image> invalidImages = new ArrayList<>();
     
     // Check that all expected Images have received the correct no of timepoints.
@@ -411,7 +410,6 @@ public class FileWriteSPW {
         Image im = root.getImage(i);
         invalidImages.add(im);
         String ID = im.getID();
-        
         // remove modulo Annotation if FLIM
         if (delays != null)  {
           XMLAnnotation ann = (XMLAnnotation) im.getLinkedAnnotation(0);
@@ -421,7 +419,7 @@ public class FileWriteSPW {
     }
     
   
-    // Now remove all limked wllSnmples and then invalid images 
+    // Now remove all limked wellSnmples and then invalid images 
     for(int i = 0; i < invalidImages.size(); i++)  {
       Image im = invalidImages.get(i);
       WellSample wellSample = im.getLinkedWellSample(0);
