@@ -28,6 +28,7 @@ package SPW;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import loci.common.services.DependencyException;
 import loci.common.services.ServiceException;
@@ -112,8 +113,10 @@ public class FileWriteSPW {
     if (file.exists())  {
       file.delete();
     }
+    this.sizet = 1; // Non-FLIM by default
   }
   
+  // Initialisation method for FLIM including  exposure times.
   public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays, double[] exposureTimes )  {
     
     this.exposureTimes = exposureTimes;
@@ -123,31 +126,25 @@ public class FileWriteSPW {
     return initializationSuccess;
   }
   
+  // Initialisation method for FLIM without   exposure times.
   public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays )  {
-    this.rows = nFov.length;
-    this.cols = nFov[0].length;
-    width = sizeX;
-    this.height = sizeY;
+    
     this.sizet = sizet;
-    
-    Exception exception = null;
-    
     setupModulo(delays);
     
-    omexml = initializeMetadata(nFov);
-    
-    initializationSuccess = initializeWriter(omexml);
+    initializationSuccess = init(nFov, sizeX, sizeY);
     
     return initializationSuccess;
     
   }
   
+  // Initialisation method for non-FLIM data.
   public boolean init( int[][] nFov, int sizeX, int  sizeY )  {
     this.rows = nFov.length;
     this.cols = nFov[0].length;
     width = sizeX;
     this.height = sizeY;
-    this.sizet = 1;
+    
     
     Exception exception = null;
     
@@ -421,9 +418,12 @@ public class FileWriteSPW {
     // Now remove all limked wellSnmples and then invalid images 
     for(int i = 0; i < invalidImages.size(); i++)  {
       Image im = invalidImages.get(i);
-      WellSample wellSample = im.getLinkedWellSample(0);
-      Well well = wellSample.getWell();
-      well.removeWellSample(wellSample);
+      List<WellSample> list = im.copyLinkedWellSampleList();
+      if (!list.isEmpty())  {
+        WellSample wellSample = im.getLinkedWellSample(0);
+        Well well = wellSample.getWell();
+        well.removeWellSample(wellSample);
+      }
       root.removeImage(im);
     }
     
