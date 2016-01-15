@@ -409,7 +409,6 @@ public class FileWriteSPW {
       if (expectedImages[i] < validPlanes)  {
         Image im = root.getImage(i);
         invalidImages.add(im);
-        String ID = im.getID();
         // remove modulo Annotation if FLIM
         if (delays != null)  {
           XMLAnnotation ann = (XMLAnnotation) im.getLinkedAnnotation(0);
