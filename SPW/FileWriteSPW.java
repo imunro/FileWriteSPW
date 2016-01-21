@@ -51,7 +51,6 @@ import ome.xml.model.primitives.NonNegativeInteger;
 import ome.xml.model.enums.NamingConvention;
 import ome.units.quantity.Time;
 import ome.xml.meta.OMEXMLMetadataRoot;
-import ome.xml.model.Annotation;
 import ome.xml.model.Image;
 import ome.xml.model.Plate;
 import ome.xml.model.StructuredAnnotations;
@@ -95,6 +94,17 @@ public class FileWriteSPW {
   /** expected Images array. No of planes that have been written to each Image **/
   private int[] expectedImages;
   
+  /** current binning Level 1== 2x2 binning, 2 = 4x4 binning etc **/
+  private int binningLevel = 0;
+  
+  private int binnedSize = 0;
+  
+  /** array in to which to copy the binned plane **/
+  private short[] binnedPlaneShort = null;
+  
+  /** size of a plane after binning **/ 
+  private int binnedPlaneSize;
+  
  
 
   /**
@@ -102,10 +112,13 @@ public class FileWriteSPW {
    *
    * @param outputFile the file to which we will export
    * @param plateDescription
+   * @param binningLevel
    */
-  public FileWriteSPW(String outputFile, String plateDescription) {
+  public FileWriteSPW(String outputFile, String plateDescription, int binningLevel) {
     this.outputFile = outputFile;    
     this.plateDescription = plateDescription;
+    this.binningLevel = binningLevel;
+   
     File file = new File(outputFile);
  
     // delete file if it exists
@@ -143,7 +156,13 @@ public class FileWriteSPW {
     this.rows = nFov.length;
     this.cols = nFov[0].length;
     width = sizeX;
-    this.height = sizeY;
+    height = sizeY;
+    
+    if (binningLevel > 1)  {
+      binnedSize = 2^binningLevel;
+      binnedPlaneSize = (sizeX/binnedSize) * (sizeY/binnedSize);
+    }
+    
     
     
     Exception exception = null;
@@ -156,11 +175,50 @@ public class FileWriteSPW {
     
   }
 
+  
+
+  /** Save a single Short plane of data.
+   * @param plane  data
+   * @param series  image no in plate
+   * @param index t plane within image
+   * @param imageDescription*/
+  public void export(short[] plane, int series, int index, String imageDescription) {
+
+     byte[] planeb;
+    
+    if (binningLevel > 0) {
+
+      if (binnedPlaneShort == null) {
+        binnedPlaneShort = new short[binnedPlaneSize];
+      }
+
+      int src;
+      
+      for (int binnedPixel = 0; binnedPixel < binnedPlaneSize; binnedPixel++) {
+        for (int y = 0; y < binnedSize; y++) {
+          src = (binnedPixel * binnedSize) + (y * width);
+          for (int x = 0; x < binnedSize; x++) {
+            binnedPlaneShort[binnedPixel] += plane[src];
+            src++;
+          }
+        }
+      }
+
+      planeb = DataTools.shortsToBytes(binnedPlaneShort, false);
+    } else {  // no binning required
+      planeb = DataTools.shortsToBytes(plane, false);
+    }
+
+    export(planeb, series, index, imageDescription);
+
+  }
+  
+  
   /** Save a single byte plane of data.
    * @param plane  data
    * @param series  image no in plate
    * @param index t plane within image*/
-  public void export(byte[] plane, int series, int index, String imageDescription) {
+  private void export(byte[] plane, int series, int index, String imageDescription) {
 
     Exception exception = null;
 
@@ -188,17 +246,6 @@ public class FileWriteSPW {
     if (exception != null) {
       System.err.println("Failed to write data!");
     }
-  }
-
-  /** Save a single Short plane of data.
-   * @param plane  data
-   * @param series  image no in plate
-   * @param index t plane within image*/
-  public void export(short[] plane, int series, int index, String imageDescription) {
-    
-    byte[] planeb = DataTools.shortsToBytes(plane, false);
-    export(planeb, series, index, imageDescription);
-    
   }
   
   /**
