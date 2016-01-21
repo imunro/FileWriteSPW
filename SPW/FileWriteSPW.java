@@ -174,10 +174,12 @@ public class FileWriteSPW {
       }
       try {
         writer.saveBytes(index, plane);
-        OMEXMLMetadataRoot root = (OMEXMLMetadataRoot) omexml.getRoot();
-        Plate plate = root.getPlate(0);
-        Image im = root.getImage(series);
-        im.setDescription(imageDescription);
+        if (index == 0) {
+          OMEXMLMetadataRoot root = (OMEXMLMetadataRoot) omexml.getRoot();
+          Plate plate = root.getPlate(0);
+          Image im = root.getImage(series);
+          im.setDescription(imageDescription);
+        }
         expectedImages[series]++;
       } catch (FormatException  | IOException e) {
         exception = e;
