@@ -160,7 +160,7 @@ public class FileWriteSPW {
    * @param plane  data
    * @param series  image no in plate
    * @param index t plane within image*/
-  public void export(byte[] plane, int series, int index) {
+  public void export(byte[] plane, int series, int index, String imageDescription) {
 
     Exception exception = null;
 
@@ -174,6 +174,10 @@ public class FileWriteSPW {
       }
       try {
         writer.saveBytes(index, plane);
+        OMEXMLMetadataRoot root = (OMEXMLMetadataRoot) omexml.getRoot();
+        Plate plate = root.getPlate(0);
+        Image im = root.getImage(series);
+        im.setDescription(imageDescription);
         expectedImages[series]++;
       } catch (FormatException  | IOException e) {
         exception = e;
@@ -188,11 +192,11 @@ public class FileWriteSPW {
    * @param plane  data
    * @param series  image no in plate
    * @param index t plane within image*/
-  public void export(short[] plane, int series, int index) {
+  public void export(short[] plane, int series, int index, String imageDescription) {
     
     byte[] planeb = DataTools.shortsToBytes(plane, false);
-    export(planeb, series, index);
-           
+    export(planeb, series, index, imageDescription);
+    
   }
   
   /**
@@ -427,8 +431,8 @@ public class FileWriteSPW {
       root.removeImage(im);
     }
     
-    
-
+ 
+  
     if (writer != null)  {
       try {
         writer.close();
