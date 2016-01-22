@@ -97,13 +97,16 @@ public class FileWriteSPW {
   /** current binning Level 1== 2x2 binning, 2 = 4x4 binning etc **/
   private int binningLevel = 0;
   
+  /** size of the binning kernel in pixels. ==2 for 2x2 binning **/
   private int binnedSize = 0;
+  
+  /** width in pixels of unbinned image  **/
+  private int unbinnedSizeX;
   
   /** array in to which to copy the binned plane **/
   private short[] binnedPlaneShort = null;
   
-  /** size of a plane after binning **/ 
-  private int binnedPlaneSize;
+  
   
  
 
@@ -155,14 +158,21 @@ public class FileWriteSPW {
   public boolean init( int[][] nFov, int sizeX, int  sizeY )  {
     this.rows = nFov.length;
     this.cols = nFov[0].length;
-    width = sizeX;
-    height = sizeY;
+    unbinnedSizeX = sizeX;
     
-    if (binningLevel > 1)  {
-      binnedSize = 2^binningLevel;
-      binnedPlaneSize = (sizeX/binnedSize) * (sizeY/binnedSize);
+    if (binningLevel > 0)  {
+      // binned size = 2^ binningLevel
+      binnedSize = 1;
+      for(int c=0;c<binningLevel;c++)  
+            binnedSize*=2;
+            
+      width = sizeX/binnedSize;
+      height = sizeY/binnedSize;
     }
-    
+    else  {
+      width = sizeX;
+      height = sizeY;
+    }
     
     
     Exception exception = null;
@@ -189,14 +199,15 @@ public class FileWriteSPW {
     if (binningLevel > 0) {
 
       if (binnedPlaneShort == null) {
-        binnedPlaneShort = new short[binnedPlaneSize];
+        binnedPlaneShort = new short[width * height];
       }
 
       int src;
       
-      for (int binnedPixel = 0; binnedPixel < binnedPlaneSize; binnedPixel++) {
+      for (int binnedPixel = 0; binnedPixel < (width * height); binnedPixel++) {
+        binnedPlaneShort[binnedPixel] = 0;
         for (int y = 0; y < binnedSize; y++) {
-          src = (binnedPixel * binnedSize) + (y * width);
+          src = (binnedPixel * binnedSize) + (y * unbinnedSizeX);
           for (int x = 0; x < binnedSize; x++) {
             binnedPlaneShort[binnedPixel] += plane[src];
             src++;
