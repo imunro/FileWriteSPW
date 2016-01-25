@@ -133,19 +133,19 @@ public class FileWriteSPW {
   }
   
   // Initialisation method for FLIM including  exposure times.
-  public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays, double[] exposureTimes )  {
+  public boolean init( int[][] nFov, int sizeX, int  sizeY, ArrayList<String> delays, double[] exposureTimes )  {
     
     this.exposureTimes = exposureTimes;
     
-    initializationSuccess = init(nFov, sizeX, sizeY, sizet, delays);
+    initializationSuccess = init(nFov, sizeX, sizeY, delays);
     
     return initializationSuccess;
   }
   
   // Initialisation method for FLIM without   exposure times.
-  public boolean init( int[][] nFov, int sizeX, int  sizeY, int sizet, ArrayList<String> delays )  {
+  public boolean init( int[][] nFov, int sizeX, int  sizeY, ArrayList<String> delays )  {
     
-    this.sizet = sizet;
+    this.sizet = delays.size();
     setupModulo(delays);
     
     initializationSuccess = init(nFov, sizeX, sizeY);
