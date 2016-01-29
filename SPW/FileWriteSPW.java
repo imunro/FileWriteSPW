@@ -94,19 +94,6 @@ public class FileWriteSPW {
   /** expected Images array. No of planes that have been written to each Image **/
   private int[] expectedImages;
   
-  /** current binning Level 1== 2x2 binning, 2 = 4x4 binning etc **/
-  private int binningLevel = 0;
-  
-  /** size of the binning kernel in pixels. ==2 for 2x2 binning **/
-  private int binnedSize = 0;
-  
-  /** width in pixels of unbinned image  **/
-  private int unbinnedSizeX;
-  
-  /** array in to which to copy the binned plane **/
-  private short[] binnedPlaneShort = null;
-  
-  
   
  
 
@@ -115,12 +102,10 @@ public class FileWriteSPW {
    *
    * @param outputFile the file to which we will export
    * @param plateDescription
-   * @param binningLevel
    */
-  public FileWriteSPW(String outputFile, String plateDescription, int binningLevel) {
+  public FileWriteSPW(String outputFile, String plateDescription) {
     this.outputFile = outputFile;    
     this.plateDescription = plateDescription;
-    this.binningLevel = binningLevel;
    
     File file = new File(outputFile);
  
@@ -158,22 +143,9 @@ public class FileWriteSPW {
   public boolean init( int[][] nFov, int sizeX, int  sizeY )  {
     this.rows = nFov.length;
     this.cols = nFov[0].length;
-    unbinnedSizeX = sizeX;
     
-    if (binningLevel > 0)  {
-      // binned size = 2^ binningLevel
-      binnedSize = 1;
-      for(int c=0;c<binningLevel;c++)  
-            binnedSize*=2;
-            
-      width = sizeX/binnedSize;
-      height = sizeY/binnedSize;
-    }
-    else  {
-      width = sizeX;
-      height = sizeY;
-    }
-    
+    width = sizeX;
+    height = sizeY;
     
     Exception exception = null;
     
@@ -194,32 +166,8 @@ public class FileWriteSPW {
    * @param imageDescription*/
   public void export(short[] plane, int series, int index, String imageDescription) {
 
-     byte[] planeb;
-    
-    if (binningLevel > 0) {
-
-      if (binnedPlaneShort == null) {
-        binnedPlaneShort = new short[width * height];
-      }
-
-      int src;
-      
-      for (int binnedPixel = 0; binnedPixel < (width * height); binnedPixel++) {
-        binnedPlaneShort[binnedPixel] = 0;
-        for (int y = 0; y < binnedSize; y++) {
-          src = (binnedPixel * binnedSize) + (y * unbinnedSizeX);
-          for (int x = 0; x < binnedSize; x++) {
-            binnedPlaneShort[binnedPixel] += plane[src];
-            src++;
-          }
-        }
-      }
-
-      planeb = DataTools.shortsToBytes(binnedPlaneShort, false);
-    } else {  // no binning required
-      planeb = DataTools.shortsToBytes(plane, false);
-    }
-
+    byte[] planeb;
+    planeb = DataTools.shortsToBytes(plane, false);
     export(planeb, series, index, imageDescription);
 
   }
@@ -303,9 +251,7 @@ public class FileWriteSPW {
       int well = 0;
   
       meta.setPlateDescription(plateDescription,0); 
-   
-     
-      // Create Minimal 2x2 Plate 
+ 
       meta.setPlateID(MetadataTools.createLSID("Plate", 0), 0);
       
       meta.setPlateRowNamingConvention(NamingConvention.LETTER, 0);
